@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chart Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="chart-container">
+        <canvas id="top-chart"></canvas>
+    </div>
+
+    <script>
+        formatData()
+        //{
+            if (!this.results) return false
+            let topChartData = {
+                datasets: [
+                    {
+                        label: '사용자', data: [],
+                        strokeColor: '#5755d9', fillColor: '#5755d9',
+                        pointStrokeColor: '#5755d9', pointColor: '#5755d9',
+                    },
+                    {
+                        label: '평균', data: [],
+                        strokeColor: '#FFD249', fillColor: '#FFD249',
+                        pointStrokeColor: '#FFD249', pointColor: '#FFD249',
+                    }
+                ],
+                labels: []
+            }
+            let midChartData = {}
+            let topTableData = {}
+            let midTableData = {}
+            for (let topCode in this.top_indicators) {
+                let indicator = this.top_indicators[topCode]
+                topTableData[topCode] = {
+                    ...indicator,
+                    ...{ score: 0, zscore: 0, tscore: '-', rank: '-', scores: [] }
+                }
+                topChartData.datasets[1].data.push(indicator.mean)
+                midChartData[topCode] = {
+                    datasets: [
+                        {
+                            label: '사용자', data: [],
+                            strokeColor: '#5755d9', fillColor: '#5755d9',
+
+                        },
+                        {
+                            label: '평균', data: [],
+                            strokeColor: '#FFD249', fillColor: '#FFD249',
+                        }
+                    ],
+                    labels: []
+                }
+            }
+            for (let midCode in this.mid_indicators) {
+                if (this.ExcludedCodes.includes(midCode)) continue
+                midTableData[midCode] = {
+                    ...this.mid_indicators[midCode],
+                    ...{ score: 0, zscore: 0, tscore: '-', rank: '-', scores: [] }
+                }
+                let topCode = this.mid_indicators[midCode].parent && this.mid_indicators[midCode].parent.code
+                if (this.top_indicators[topCode] && !this.top_indicators[topCode].mid_codes) {
+                    this.top_indicators[topCode].mid_codes = []
+                }
+                this.top_indicators[topCode].mid_codes.push(midCode)
+            }
+            // 1 result : 1 paper : 1 top indicator
+            for (let result of this.results) {
+                let scores = result.scores
+                if (!scores || !result.paper) continue
+                // 하위항목(세션)별
+                for (let code in scores.indicator) {
+                    // todo 이걸 string으로 하지 않을 수 없을까
+                    let midCode = code.substring(0, code.length - 2)
+                    if (!midTableData[midCode]) {
+                        continue
+                    }
+                    let score = scores.indicator[code]
+                    midTableData[midCode].scores.push(Number(score.score))
+                }
+                for (let midCode in midTableData) {
+                    let topCode = this.mid_indicators[midCode] && this.mid_indicators[midCode].parent && this.mid_indicators[midCode].parent.code
+                    if (!topCode) continue
+                    let cnt = midTableData[midCode].scores.length
+                    if (cnt === 0) continue
+                    // 세션 평균
+                    midTableData[midCode].score = this.roundFloat(midTableData[midCode].scores.reduce((a, b) => a + b, 0) / cnt)
+                    midTableData[midCode].zscore = this.calcZScore(midTableData[midCode].score, midTableData[midCode].mean, midTableData[midCode].standard)
+                    midTableData[midCode].tscore = this.calcTScore(midTableData[midCode].zscore)
+                    midTableData[midCode].rank = this.getRank(midTableData[midCode].zscore)
+                    topTableData[topCode].scores.push(midTableData[midCode].score)
+                }
+            }
+            // 평가지 평균 == 세션 평균의 평균
+            for (let topCode in topTableData) {
+                let cnt = topTableData[topCode].scores.length
+                if (cnt === 0) continue
+                topTableData[topCode].score = this.roundFloat(topTableData[topCode].scores.reduce((a, b) => a + b, 0) / cnt)
+                topTableData[topCode].zscore = this.calcZScore(topTableData[topCode].score, topTableData[topCode].mean, topTableData[topCode].standard)
+                topTableData[topCode].tscore = this.calcTScore(topTableData[topCode].zscore)
+                topTableData[topCode].rank = this.getRank(topTableData[topCode].zscore)
+            }
+            this.top_table_items = Object.values(topTableData)
+            this.mid_table_items = Object.values(midTableData)
+            this.top_table_items.sort((a, b) => {
+                return this.TopIndicatorCodes.indexOf(a.code) - this.TopIndicatorCodes.indexOf(b.code)
+            })
+            this.mid_table_items.sort((a, b) => {
+                return this.TopIndicatorCodes.indexOf(a.parent.code) - this.TopIndicatorCodes.indexOf(b.parent.code)
+            })
+            for (let ele of this.top_table_items) {
+                topChartData.datasets[0].data.push(ele.score)
+                topChartData.labels.push(ele.title)
+            }
+            for (let ele of this.mid_table_items) {
+                let parentCode = ele.parent && ele.parent.code
+                if (!midChartData[parentCode]) continue
+                midChartData[parentCode].datasets[0].data.push(ele.score)
+                midChartData[parentCode].datasets[1].data.push(ele.mean)
+                midChartData[parentCode].labels.push(ele.title)
+            }
+            this.top_chart_data = topChartData
+            this.mid_chart_data = midChartData
+            this.mid_charts = {}
+        //}
+
+
+        const exampleData = {
+            top_indicators: {
+                // ... top indicators 데이터 구조
+            },
+            mid_indicators: {
+                // ... mid indicators 데이터 구조
+            },
+            results: [
+                // ... results 데이터 구조
+            ],
+            // ... 나머지 필요한 데이터와 메서드
+        };
+
+        // 데이터 처리 함수 호출
+        formatData.call(exampleData);
+
+        // 이제 `exampleData.top_chart_data`와 `exampleData.mid_chart_data`는 차트 데이터를 포함하고 있어야 합니다.
+
+        // 'top-chart' 캔버스에 차트를 생성합니다.
+        const ctx = document.getElementById('top-chart').getContext('2d');
+        const topChart = new Chart(ctx, {
+            type: 'bar',
+            data: exampleData.top_chart_data,
+            // ... 차트 옵션
+        });
+
+    </script>
+</body>
+
+</html>

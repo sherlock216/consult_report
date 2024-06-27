@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link type="text/css" rel="stylesheet" href="./css/login.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.5/xlsx.full.min.js"></script>
+
+</head>
+
+<body>
+
+
+    <div class="login-container">
+        <h2 class="child"> cREAte 보고서<br>로그인</h2>
+        <input type="text" id="name" class="child">
+        <p>로그인 아이디는 <br>학생이름+휴대폰 번호 뒷자리 4자리입니다.<br>예) 김철수(010-1234-5678)의 아이디 : <b>철수5678</b></p>
+        <button class="child" id="button">로그인</button>
+    </div>
+
+
+    <script>
+
+
+        document.getElementById('button').addEventListener('click', async() => {
+            const name = document.getElementById('name').value;
+            if (!name) {
+                alert('아이디를 입력해주세요.');
+                return;
+            }
+            sessionStorage.setItem('name', name);
+
+            try{
+                const loginsuccess = await loadExcel('./createdata.xlsx');
+                if(loginsuccess) {
+                    document.cookie = "login=true";
+                    location.href = "./report.html";
+                }
+                else{
+                    sessionStorage.clear();
+                    location.href = "./login.html";
+                }
+            }
+            catch(error){
+                console.error('error: ', error);
+            }
+            
+            // 캔버스에서 차트 컨텍스트를 가져와서 차트 생성
+            
+        });
+
+        async function loadExcel(excelfile) {
+            const res = await fetch(excelfile);
+            const arrayBuffer = await res.arrayBuffer();
+            const workbook = XLSX.read(arrayBuffer, {
+                type: 'buffer'
+            });
+            const firstsheet = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstsheet];
+            const rows = XLSX.utils.sheet_to_json(worksheet);
+            const info = sessionStorage.getItem('name');
+            var index = '';
+
+            for (let i = 0; i < rows.length; i++) {
+                const studentName = rows[i]["이름"].substr(1);
+                const phoneNumber_temp = rows[i]["번호"].replace(/-/g, '').trim();;
+                const phoneNumber_index = phoneNumber_temp.length - 4;
+                const phoneNumber = phoneNumber_temp.substring(phoneNumber_index);
+                const studentId = studentName + phoneNumber;
+
+                if (info == studentId) {
+                    index = i;
+                    const datarow = rows[index];
+                    sessionStorage.setItem("data", JSON.stringify(datarow));
+                    return true;
+                }
+                if (i == rows.length - 1) {
+                    alert('로그인에 해당하는 학생의 데이터가 없습니다.');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
