@@ -1,10 +1,10 @@
-<h1>Resilience Diary</h1>
-<img src="public/image/chat1.png" alt="Example Image" style="width:128px;">
+<h1>cREAte 상담보고서</h1>
+<img src="image/plot.png" alt="Example Image" style="width:128px;">
 <br>
 <br>
 
 <h2>Project Overview</h2>
-<p>상담 결과 내용을 보고서 페이지로 제</p>
+<p>상담 결과 내용을 보고서 페이지로 제작</p>
 <p>개발기간: 2024.4.4 ~ 2024.4.29 </p>
 <br>
 <br>
