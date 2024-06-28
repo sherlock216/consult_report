@@ -1,5 +1,5 @@
 <h1>cREAte 상담보고서</h1>
-<img src="image/plot.png" alt="Example Image" style="width:128px;">
+<img src="image/plot.png" alt="Example Image" style="width:500px;">
 <br>
 <br>
 
